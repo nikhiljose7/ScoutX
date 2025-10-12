@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Similar Players - Football Analytics{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Similar Player Identification</h2>
+    <p>Find players with similar playing styles and statistics</p>
+</div>
+
+<div class="card">
+    <div class="card-header">Search for Similar Players</div>
+    <form id="similarForm">
+        <div class="form-group">
+            <label for="playerName">Player Name</label>
+            <input type="text" id="playerName" class="form-control" placeholder="Enter player name" required>
+        </div>
+        <div class="form-group">
+            <label for="numResults">Number of Similar Players</label>
+            <select id="numResults" class="form-control">
+                <option value="5">Top 5</option>
+                <option value="10" selected>Top 10</option>
+                <option value="15">Top 15</option>
+                <option value="20">Top 20</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Find Similar Players</button>
+    </form>
+</div>
+
+<div id="resultsSection" class="hidden">
+    <div class="card">
+        <div class="card-header">Results</div>
+        <div id="loadingMessage" class="loading hidden">
+            <div class="loading-spinner"></div>
+            <p>Analyzing player statistics...</p>
+        </div>
+        <div id="errorMessage" class="message message-error hidden"></div>
+        <div id="resultsContent">
+            <p class="text-center">Search for a player to see similar players</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('similarForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const playerName = document.getElementById('playerName').value;
+    const numResults = document.getElementById('numResults').value;
+    
+    const resultsSection = document.getElementById('resultsSection');
+    const loadingMessage = document.getElementById('loadingMessage');
+    const errorMessage = document.getElementById('errorMessage');
+    const resultsContent = document.getElementById('resultsContent');
+    
+    resultsSection.classList.remove('hidden');
+    loadingMessage.classList.remove('hidden');
+    errorMessage.classList.add('hidden');
+    resultsContent.innerHTML = '<p class="text-center">Processing...</p>';
+    
+    // TODO: Implement API call for similar players
+    setTimeout(() => {
+        loadingMessage.classList.add('hidden');
+        resultsContent.innerHTML = '<p class="text-center">Feature coming soon. API endpoint needs to be implemented.</p>';
+    }, 1000);
+});
+</script>
+{% endblock %}

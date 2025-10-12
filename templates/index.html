@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Football Analytics{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Football Player Analysis System</h2>
+    <p>Analyze football players from Europe's top 5 leagues</p>
+</div>
+
+<div class="card-grid">
+    <div class="card">
+        <div class="card-header">Undervalued Players</div>
+        <p>Identify players whose market value is below their predicted performance value using machine learning models.</p>
+        <a href="{{ url_for('undervalued') }}" class="btn btn-primary mt-2">Explore</a>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Similar Players</div>
+        <p>Find players with similar playing styles and statistics to help with recruitment and tactical planning.</p>
+        <a href="{{ url_for('similar') }}" class="btn btn-primary mt-2">Explore</a>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Player Comparison</div>
+        <p>Compare statistics and performance metrics between multiple players side by side.</p>
+        <a href="{{ url_for('comparison') }}" class="btn btn-primary mt-2">Explore</a>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Player Chatbot</div>
+        <p>Ask questions about player statistics, performance, and get detailed information through an AI chatbot.</p>
+        <a href="{{ url_for('chatbot') }}" class="btn btn-primary mt-2">Explore</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">About This Project</div>
+    <p>This system analyzes football players from the top 5 European leagues (Premier League, La Liga, Serie A, Bundesliga, and Ligue 1) using advanced data analytics and machine learning techniques.</p>
+    <ul class="mt-2">
+        <li>Data-driven player valuation</li>
+        <li>Performance metrics analysis</li>
+        <li>ML-based predictions and recommendations</li>
+        <li>Interactive data exploration</li>
+    </ul>
+</div>
+{% endblock %}
