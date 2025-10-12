@@ -7,8 +7,15 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
+from dotenv import load_dotenv
+from chatbot import chatbot_bp
+
+load_dotenv()
 
 app = Flask(__name__)
+# Add a secret key for session management
+app.secret_key = os.urandom(24)
+app.register_blueprint(chatbot_bp)
 
 # Global variables for models and data
 models = {}
@@ -44,8 +51,8 @@ def comparison():
     return render_template('comparison.html')
 
 @app.route('/chatbot')
-def chatbot():
-    """Chatbot module"""
+def chatbot_page():
+    """Chatbot module page"""
     return render_template('chatbot.html')
 
 @app.route('/api/undervalued', methods=['POST'])
