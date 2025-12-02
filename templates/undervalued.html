@@ -2,64 +2,103 @@
 
 {% block title %}Undervalued Players - Football Analytics{% endblock %}
 
+{% block head %}{% endblock %}
+
 {% block content %}
-<div class="page-header">
-    <h2>Undervalued Players</h2>
-    <p>Players with predicted value higher than their current market value</p>
+<div class="app-header">
+    <div class="title-row">
+        <h1>Undervalued Players</h1>
+    </div>
+    <p class="subtitle">Players with predicted value higher than their current market value</p>
 </div>
 
-<div class="card">
-    <div class="card-header">Filter Options</div>
-    <form id="filterForm">
-        <div class="form-group">
-            <label for="position">Position</label>
-            <select id="position" class="form-control">
-                <option value="ALL">All Positions</option>
-                <option value="FW">Forward (FW)</option>
-                <option value="MF">Midfielder (MF)</option>
-                <option value="DF">Defender (DF)</option>
-                <option value="GK">Goalkeeper (GK)</option>
-            </select>
-        </div>
-        <div class="form-group">
-            <label for="topN">Number of Results</label>
-            <select id="topN" class="form-control">
-                <option value="10">Top 10</option>
-                <option value="25" selected>Top 25</option>
-                <option value="50">Top 50</option>
-                <option value="100">Top 100</option>
-            </select>
-        </div>
-        <button type="submit" class="btn btn-primary">Search</button>
-    </form>
+<div class="controls">
+    <label>Position:
+        <select id="position" class="dark-select">
+            <option value="ALL">All Positions</option>
+            <option value="FW">Forward (FW)</option>
+            <option value="MF">Midfielder (MF)</option>
+            <option value="DF">Defender (DF)</option>
+            <option value="GK">Goalkeeper (GK)</option>
+        </select>
+    </label>
+    <label>League:
+        <select id="league" class="dark-select">
+            <option value="ALL">All Leagues</option>
+        </select>
+    </label>
+    <label>Team:
+        <select id="squad" class="dark-select">
+            <option value="ALL">All Teams</option>
+        </select>
+    </label>
+    <label>Items:
+        <select id="itemsPerPage" class="dark-select">
+            <option value="10">10</option>
+            <option value="25" selected>25</option>
+            <option value="50">50</option>
+        </select>
+    </label>
+</div>
+
+<div class="controls">
+    <label>Age:
+        <input type="number" id="minAge" class="dark-input" placeholder="Min" style="width: 60px;" min="16" max="45">
+        -
+        <input type="number" id="maxAge" class="dark-input" placeholder="Max" style="width: 60px;" min="16" max="45">
+    </label>
+    <label>Value (€M):
+        <input type="number" id="minValue" class="dark-input" placeholder="Min" style="width: 70px;" min="0">
+        -
+        <input type="number" id="maxValue" class="dark-input" placeholder="Max" style="width: 70px;" min="0">
+    </label>
+    <label>Min Undervaluation (€M):
+        <input type="number" id="minUndervaluation" class="dark-input" placeholder="Min" style="width: 70px;" min="0">
+    </label>
+    <button id="searchBtn" class="btn">Search</button>
 </div>
 
 <div id="resultsSection" class="hidden">
-    <div class="card">
-        <div class="card-header">Results</div>
+    <div class="radar-outer" style="display: block; padding: 20px;">
+        <h3 style="margin-top: 0; margin-bottom: 15px;">Results</h3>
         <div id="loadingMessage" class="loading hidden">
             <div class="loading-spinner"></div>
             <p>Loading results...</p>
         </div>
         <div id="errorMessage" class="message message-error hidden"></div>
         <div class="table-container">
-            <table id="resultsTable">
+            <table id="resultsTable" class="similar-table">
                 <thead>
                     <tr>
-                        <th>Rank</th>
-                        <th>Player</th>
-                        <th>Position</th>
-                        <th>Squad</th>
-                        <th>League</th>
-                        <th>Age</th>
-                        <th>Market Value (€M)</th>
-                        <th>Predicted Value (€M)</th>
-                        <th>Undervaluation (€M)</th>
+                        <th data-sort="rank" class="sortable">Rank <span class="sort-icon">↕</span></th>
+                        <th data-sort="player" class="sortable">Player <span class="sort-icon">↕</span></th>
+                        <th data-sort="position" class="sortable">Position <span class="sort-icon">↕</span></th>
+                        <th data-sort="squad" class="sortable">Squad <span class="sort-icon">↕</span></th>
+                        <th data-sort="league" class="sortable">League <span class="sort-icon">↕</span></th>
+                        <th data-sort="age" class="sortable">Age <span class="sort-icon">↕</span></th>
+                        <th data-sort="market_value" class="sortable">Market Value (€M) <span class="sort-icon">↕</span>
+                        </th>
+                        <th data-sort="predicted_value" class="sortable">Predicted Value (€M) <span
+                                class="sort-icon">↕</span></th>
+                        <th data-sort="undervaluation" class="sortable">Undervaluation (€M) <span
+                                class="sort-icon">↕</span></th>
                     </tr>
                 </thead>
                 <tbody id="resultsBody">
                 </tbody>
             </table>
+        </div>
+        <div class="pagination-container mt-3 d-flex justify-content-between align-items-center"
+            style="margin-top: 20px;">
+            <div class="pagination-info">
+                Showing <span id="startRange">0</span>-<span id="endRange">0</span> of <span id="totalItems">0</span>
+                players
+            </div>
+            <div class="pagination-controls">
+                <button id="prevPage" class="btn btn-secondary mr-2">&lt; Previous</button>
+                <span id="currentPage" class="mx-2">Page 1</span>
+                <button id="nextPage" class="btn btn-secondary ml-2">Next &gt;</button>
+            </div>
         </div>
     </div>
 </div>
@@ -67,59 +106,254 @@
 
 {% block extra_js %}
 <script>
-document.getElementById('filterForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const position = document.getElementById('position').value;
-    const topN = parseInt(document.getElementById('topN').value);
-    
-    const resultsSection = document.getElementById('resultsSection');
-    const loadingMessage = document.getElementById('loadingMessage');
-    const errorMessage = document.getElementById('errorMessage');
-    const resultsBody = document.getElementById('resultsBody');
-    
-    resultsSection.classList.remove('hidden');
-    loadingMessage.classList.remove('hidden');
-    errorMessage.classList.add('hidden');
-    resultsBody.innerHTML = '';
-    
-    try {
-        const response = await fetch('/api/undervalued', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ position, top_n: topN })
+    // Global variables for pagination and sorting
+    let currentPage = 1;
+    let totalPages = 1;
+    let currentSortColumn = 'undervaluation';
+    let currentSortDirection = 'desc';
+    let itemsPerPage = 25;
+    let totalItems = 0;
+    let currentTableData = [];
+
+    // Function to update pagination controls
+    function updatePaginationControls() {
+        const startRange = (currentPage - 1) * itemsPerPage + 1;
+        const endRange = Math.min(currentPage * itemsPerPage, totalItems);
+
+        document.getElementById('startRange').textContent = totalItems > 0 ? startRange : 0;
+        document.getElementById('endRange').textContent = endRange;
+        document.getElementById('totalItems').textContent = totalItems;
+        document.getElementById('currentPage').textContent = `Page ${currentPage}`;
+
+        // Update button states
+        document.getElementById('prevPage').disabled = currentPage === 1;
+        document.getElementById('nextPage').disabled = currentPage >= totalPages;
+    }
+
+    // Function to handle sorting
+    function sortTable(column) {
+        const headers = document.querySelectorAll('.sortable');
+        headers.forEach(header => {
+            if (header.dataset.sort === column) {
+                header.classList.add('active-sort');
+                if (currentSortColumn === column) {
+                    currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+                } else {
+                    // Default to descending for undervaluation, ascending for others
+                    currentSortDirection = column === 'undervaluation' ? 'desc' : 'asc';
+                }
+                header.classList.toggle('sort-asc', currentSortDirection === 'asc');
+                header.classList.toggle('sort-desc', currentSortDirection === 'desc');
+            } else {
+                header.classList.remove('active-sort', 'sort-asc', 'sort-desc');
+            }
         });
-        
-        const result = await response.json();
-        loadingMessage.classList.add('hidden');
-        
-        if (result.success) {
-            result.data.forEach((player, index) => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${index + 1}</td>
-                    <td>${player.Player}</td>
-                    <td>${player.Main_Pos}</td>
-                    <td>${player.Squad}</td>
-                    <td>${player.Comp}</td>
-                    <td>${Math.round(player.Age)}</td>
-                    <td>${player.Market_Value_Million_EUR.toFixed(2)}</td>
-                    <td>${player.Predicted_Value.toFixed(2)}</td>
-                    <td>${player.Undervaluation.toFixed(2)}</td>
-                `;
-                resultsBody.appendChild(row);
+
+        currentSortColumn = column;
+        fetchData(true); // Reset to first page when sorting
+    }
+
+    // Unified function to render the table. Accepts `data` (array) returned by the API
+    // and stores it in `currentTableData` so sorting/pagination can operate on it.
+    function renderTable(data) {
+        currentTableData = Array.isArray(data) ? data : [];
+        const resultsBody = document.getElementById('resultsBody');
+        resultsBody.innerHTML = '';
+
+        currentTableData.forEach((player, index) => {
+            const row = document.createElement('tr');
+            const playerLink = `<a href="/player?player=${encodeURIComponent(player.Player)}" class="player-link" style="color: #4f46e5; text-decoration: none;">${player.Player}</a>`;
+            row.innerHTML = `
+            <td>${(currentPage - 1) * itemsPerPage + index + 1}</td>
+            <td>${playerLink}</td>
+            <td>${player.Main_Pos || ''}</td>
+            <td>${player.Squad || ''}</td>
+            <td>${player.Comp || ''}</td>
+            <td>${player.Age != null ? Math.round(player.Age) : ''}</td>
+            <td>${player.Market_Value_Million_EUR != null ? Number(player.Market_Value_Million_EUR).toFixed(2) : ''}</td>
+            <td>${player.Predicted_Value != null ? Number(player.Predicted_Value).toFixed(2) : ''}</td>
+            <td>${player.Undervaluation != null ? Number(player.Undervaluation).toFixed(2) : ''}</td>
+        `;
+            resultsBody.appendChild(row);
+        });
+    }
+
+    // (Sorting handlers attached later along with pagination and filters.)
+
+    // Function to populate league and team dropdowns
+    async function populateDropdowns() {
+        try {
+            const response = await fetch('/api/undervalued/filters');
+            const result = await response.json();
+
+            if (result.success) {
+                const leagueSelect = document.getElementById('league');
+                const squadSelect = document.getElementById('squad');
+
+                // Populate leagues
+                result.leagues.sort().forEach(league => {
+                    const option = document.createElement('option');
+                    option.value = league;
+                    option.textContent = league;
+                    leagueSelect.appendChild(option);
+                });
+
+                // Populate teams
+                result.squads.sort().forEach(squad => {
+                    const option = document.createElement('option');
+                    option.value = squad;
+                    option.textContent = squad;
+                    squadSelect.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Error loading filters:', error);
+        }
+    }
+
+    // Call populateDropdowns when page loads, then fetch initial data so the
+    // user sees results immediately without needing to click Search.
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            await populateDropdowns();
+        } catch (e) {
+            // ignore — populateDropdowns logs its own errors
+        }
+        // Fetch initial page of data with default filters/sort
+        fetchData(true);
+    });
+
+    // Function to fetch and display data
+    async function fetchData(resetPage = true) {
+        if (resetPage) {
+            currentPage = 1;
+        }
+
+        console.log('Fetching data with:', {
+            sortColumn: currentSortColumn,
+            sortDirection: currentSortDirection,
+            page: currentPage
+        });
+
+        // Get all filter values
+        const position = document.getElementById('position').value;
+        const league = document.getElementById('league').value;
+        const squad = document.getElementById('squad').value;
+        itemsPerPage = parseInt(document.getElementById('itemsPerPage').value);
+        const minAge = document.getElementById('minAge').value ? parseInt(document.getElementById('minAge').value) : null;
+        const maxAge = document.getElementById('maxAge').value ? parseInt(document.getElementById('maxAge').value) : null;
+        const minValue = document.getElementById('minValue').value ? parseFloat(document.getElementById('minValue').value) : null;
+        const maxValue = document.getElementById('maxValue').value ? parseFloat(document.getElementById('maxValue').value) : null;
+        const minUndervaluation = document.getElementById('minUndervaluation').value ? parseFloat(document.getElementById('minUndervaluation').value) : null;
+
+        const resultsSection = document.getElementById('resultsSection');
+        const loadingMessage = document.getElementById('loadingMessage');
+        const errorMessage = document.getElementById('errorMessage');
+        const resultsBody = document.getElementById('resultsBody');
+
+        resultsSection.classList.remove('hidden');
+        loadingMessage.classList.remove('hidden');
+        errorMessage.classList.add('hidden');
+        resultsBody.innerHTML = '';
+
+        try {
+            const response = await fetch('/api/undervalued', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    position,
+                    league,
+                    squad,
+                    page: currentPage,
+                    items_per_page: itemsPerPage,
+                    sort_column: currentSortColumn,
+                    sort_direction: currentSortDirection,
+                    min_age: minAge,
+                    max_age: maxAge,
+                    min_value: minValue,
+                    max_value: maxValue,
+                    min_undervaluation: minUndervaluation
+                })
             });
-        } else {
-            errorMessage.textContent = 'Error: ' + result.error;
+
+            const result = await response.json();
+            loadingMessage.classList.add('hidden');
+
+            if (result.success) {
+                totalItems = result.total_items;
+                totalPages = Math.ceil(totalItems / itemsPerPage);
+
+                renderTable(result.data);
+                updatePaginationControls();
+
+                if (result.data.length === 0) {
+                    errorMessage.textContent = 'No players found matching the selected filters.';
+                    errorMessage.classList.remove('hidden');
+                }
+            } else {
+                errorMessage.textContent = 'Error: ' + result.error;
+                errorMessage.classList.remove('hidden');
+            }
+        } catch (error) {
+            loadingMessage.classList.add('hidden');
+            errorMessage.textContent = 'Error loading results. Please try again.';
             errorMessage.classList.remove('hidden');
         }
-    } catch (error) {
-        loadingMessage.classList.add('hidden');
-        errorMessage.textContent = 'Error loading results. Please try again.';
-        errorMessage.classList.remove('hidden');
     }
-});
+
+
+
+    // Event Listeners
+    document.addEventListener('DOMContentLoaded', () => {
+        // Sort header click handlers
+        document.querySelectorAll('.sortable').forEach(header => {
+            header.addEventListener('click', () => {
+                const column = header.dataset.sort;
+                if (currentSortColumn === column) {
+                    currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+                } else {
+                    currentSortColumn = column;
+                    currentSortDirection = 'asc';
+                }
+
+                // Update header classes
+                document.querySelectorAll('.sortable').forEach(h => {
+                    h.classList.remove('active-sort', 'sort-asc', 'sort-desc');
+                });
+                header.classList.add('active-sort');
+                header.classList.add(currentSortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+
+                fetchData(true);
+            });
+        });
+
+        // Pagination controls
+        document.getElementById('prevPage').addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                fetchData(false);
+            }
+        });
+
+        document.getElementById('nextPage').addEventListener('click', () => {
+            if (currentPage < totalPages) {
+                currentPage++;
+                fetchData(false);
+            }
+        });
+
+        // Items per page change handler
+        document.getElementById('itemsPerPage').addEventListener('change', () => {
+            fetchData(true);
+        });
+
+        // Search button click handler (replaced form submit)
+        document.getElementById('searchBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            fetchData(true);
+        });
+    });
 </script>
 {% endblock %}

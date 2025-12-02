@@ -1,71 +1,117 @@
 {% extends "base.html" %}
 
-{% block title %}Similar Players - Football Analytics{% endblock %}
+{% block title %}Similar Player Identification - Football Analytics{% endblock %}
+
+{% block extra_css %}
+<!-- Chart.js is required for the radar chart -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Marked.js for markdown parsing -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h2>Similar Player Identification</h2>
-    <p>Find players with similar playing styles and statistics</p>
+<div class="app-header">
+    <div class="title-row">
+        <div class="logo">⚽🔍</div>
+        <h1>Similar Player Identification</h1>
+    </div>
+    <p class="subtitle">Find your favorite player & more!!</p>
 </div>
 
-<div class="card">
-    <div class="card-header">Search for Similar Players</div>
-    <form id="similarForm">
-        <div class="form-group">
-            <label for="playerName">Player Name</label>
-            <input type="text" id="playerName" class="form-control" placeholder="Enter player name" required>
-        </div>
-        <div class="form-group">
-            <label for="numResults">Number of Similar Players</label>
-            <select id="numResults" class="form-control">
-                <option value="5">Top 5</option>
-                <option value="10" selected>Top 10</option>
-                <option value="15">Top 15</option>
-                <option value="20">Top 20</option>
-            </select>
-        </div>
-        <button type="submit" class="btn btn-primary">Find Similar Players</button>
-    </form>
+<div class="search-area">
+    <input id="searchBox" placeholder="Type player name..." autocomplete="off" />
+    <div id="suggestions" class="suggestions"></div>
 </div>
 
-<div id="resultsSection" class="hidden">
-    <div class="card">
-        <div class="card-header">Results</div>
-        <div id="loadingMessage" class="loading hidden">
-            <div class="loading-spinner"></div>
-            <p>Analyzing player statistics...</p>
+<div class="controls">
+    <label>K:
+        <input id="kInput" type="number" min="1" max="50" value="10" class="dark-input" />
+    </label>
+
+    <label>League:
+        <select id="leagueFilter" class="dark-select">
+            <option value="">All Leagues</option>
+        </select>
+    </label>
+
+    <label>Position:
+        <select id="positionFilter" class="dark-select">
+            <option value="">All Positions</option>
+        </select>
+    </label>
+
+    <label>Age:
+        <input id="minAge" class="dark-input" type="number" placeholder="min" style="width: 60px;" />
+        -
+        <input id="maxAge" class="dark-input" type="number" placeholder="max" style="width: 60px;" />
+    </label>
+
+    <button id="getSimilarBtn">Get Similar</button>
+</div>
+
+<div class="stat-panels">
+    <div id="inputPlayerPanel" class="stat-panel">
+        <h3>Input Player</h3>
+        <div id="inputPlayerContent">
+            No player selected. Search above and choose a player.
         </div>
-        <div id="errorMessage" class="message message-error hidden"></div>
-        <div id="resultsContent">
-            <p class="text-center">Search for a player to see similar players</p>
+    </div>
+
+    <div id="selectedPlayerPanel" class="stat-panel">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3>Selected Players</h3>
+            <div style="display: flex; gap: 8px">
+                <button id="toggleAllFeaturesBtn" title="Show all features for all boxes" class="btn-green">
+                    Show ALL features
+                </button>
+            </div>
+        </div>
+        <div id="selectedMultipleHolder" class="selected-multiple-holder">
+            Select players and click "Compare selected" to populate here.
         </div>
     </div>
 </div>
+
+<div class="content-row">
+    <div id="leftCol" class="left-col">
+        <h2>Similar Players</h2>
+        <p class="table-description">
+            These are the players most similar to your selected player based on
+            their performance, style of play, and statistical profile.
+        </p>
+        <div id="similarTableHolder"></div>
+        <div style="display: flex; gap: 8px; justify-content: center; margin-top: 10px;">
+            <button id="compareSelectedBtn">Compare selected</button>
+            <button id="removeSelectionBtn" class="btn-red">
+                Remove selection
+            </button>
+        </div>
+    </div>
+
+    <div id="rightCol" class="right-col">
+        <h2>Radar Comparison</h2>
+        <div class="radar-outer">
+            <div class="radar-card">
+                <canvas id="radarChartDefault" width="700" height="700"></canvas>
+            </div>
+        </div>
+        <div id="legendContainer" class="legend-container"></div>
+    </div>
+</div>
+
+<!-- AI report collapsible -->
+<div class="ai-collapsible" style="margin-top: 20px;">
+    <button id="toggleAiReportBtn" class="btn-toggle"
+        style="width: 100%; text-align: center; padding: 10px; font-weight: bold; font-size: 1.1em;">
+        Show AI Report
+    </button>
+    <div id="aiReportBox" class="ai-report" style="display: none"></div>
+</div>
+
+<div id="customTooltip" class="custom-tooltip"
+    style="display: none; position: fixed; z-index: 99999; pointer-events: none;"></div>
 {% endblock %}
 
 {% block extra_js %}
-<script>
-document.getElementById('similarForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const playerName = document.getElementById('playerName').value;
-    const numResults = document.getElementById('numResults').value;
-    
-    const resultsSection = document.getElementById('resultsSection');
-    const loadingMessage = document.getElementById('loadingMessage');
-    const errorMessage = document.getElementById('errorMessage');
-    const resultsContent = document.getElementById('resultsContent');
-    
-    resultsSection.classList.remove('hidden');
-    loadingMessage.classList.remove('hidden');
-    errorMessage.classList.add('hidden');
-    resultsContent.innerHTML = '<p class="text-center">Processing...</p>';
-    
-    // TODO: Implement API call for similar players
-    setTimeout(() => {
-        loadingMessage.classList.add('hidden');
-        resultsContent.innerHTML = '<p class="text-center">Feature coming soon. API endpoint needs to be implemented.</p>';
-    }, 1000);
-});
-</script>
+<script src="{{ url_for('static', filename='js/similar.js') }}"></script>
 {% endblock %}

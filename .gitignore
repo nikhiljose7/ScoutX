@@ -1,1 +1,16 @@
 venv/
+.env
+__pycache__/
+*.py[cod]
+*$py.class
+.vscode/
+.idea/
+*.log
+*.pot
+*.mo
+*.spec
+build/
+dist/
+*.manifest
+*.zip
+projectzip.zip

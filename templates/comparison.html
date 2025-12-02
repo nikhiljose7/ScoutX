@@ -3,40 +3,36 @@
 {% block title %}Player Comparison - Football Analytics{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h2>Player Comparison</h2>
-    <p>Compare statistics between multiple players</p>
+<div class="app-header">
+    <div class="title-row">
+        <h1>Player Comparison</h1>
+    </div>
+    <p class="subtitle">Compare statistics between multiple players</p>
 </div>
 
-<div class="card">
-    <div class="card-header">Select Players to Compare</div>
-    <form id="comparisonForm">
-        <div class="form-group">
-            <label for="player1">Player 1</label>
-            <input type="text" id="player1" class="form-control" placeholder="Enter first player name" required>
-        </div>
-        <div class="form-group">
-            <label for="player2">Player 2</label>
-            <input type="text" id="player2" class="form-control" placeholder="Enter second player name" required>
-        </div>
-        <div class="form-group">
-            <label for="player3">Player 3 (Optional)</label>
-            <input type="text" id="player3" class="form-control" placeholder="Enter third player name">
-        </div>
-        <button type="submit" class="btn btn-primary">Compare Players</button>
-    </form>
+<div class="controls" style="flex-direction: column; align-items: center; gap: 15px;">
+    <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+        <input list="playersList" type="text" id="player1" class="dark-input" placeholder="Player 1"
+            style="width: 250px;" required>
+        <input list="playersList" type="text" id="player2" class="dark-input" placeholder="Player 2"
+            style="width: 250px;" required>
+        <input list="playersList" type="text" id="player3" class="dark-input" placeholder="Player 3 (Optional)"
+            style="width: 250px;">
+    </div>
+    <button id="compareBtn" class="btn">Compare Players</button>
+    <datalist id="playersList"></datalist>
 </div>
 
 <div id="resultsSection" class="hidden">
-    <div class="card">
-        <div class="card-header">Comparison Results</div>
+    <div class="radar-outer" style="display: block; padding: 20px;">
+        <h3 style="margin-top: 0; margin-bottom: 15px;">Comparison Results</h3>
         <div id="loadingMessage" class="loading hidden">
             <div class="loading-spinner"></div>
             <p>Loading player data...</p>
         </div>
         <div id="errorMessage" class="message message-error hidden"></div>
-        <div id="resultsContent">
-            <p class="text-center">Select players to compare</p>
+        <div id="resultsContent" style="overflow-x: auto;">
+            <p class="text-center" style="color: #9aa3b2;">Select players to compare</p>
         </div>
     </div>
 </div>
@@ -44,28 +40,86 @@
 
 {% block extra_js %}
 <script>
-document.getElementById('comparisonForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const player1 = document.getElementById('player1').value;
-    const player2 = document.getElementById('player2').value;
-    const player3 = document.getElementById('player3').value;
-    
+    const playersList = document.getElementById('playersList');
     const resultsSection = document.getElementById('resultsSection');
     const loadingMessage = document.getElementById('loadingMessage');
     const errorMessage = document.getElementById('errorMessage');
     const resultsContent = document.getElementById('resultsContent');
-    
-    resultsSection.classList.remove('hidden');
-    loadingMessage.classList.remove('hidden');
-    errorMessage.classList.add('hidden');
-    resultsContent.innerHTML = '<p class="text-center">Processing...</p>';
-    
-    // TODO: Implement API call for player comparison
-    setTimeout(() => {
-        loadingMessage.classList.add('hidden');
-        resultsContent.innerHTML = '<p class="text-center">Feature coming soon. API endpoint needs to be implemented.</p>';
-    }, 1000);
-});
+
+    async function loadPlayers() {
+        try {
+            const resp = await fetch('/api/players');
+            const j = await resp.json();
+            if (!j.success) return;
+            (j.data || []).forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.Player;
+                playersList.appendChild(opt);
+            });
+        } catch (err) {
+            // ignore
+        }
+    }
+
+    function showError(msg) {
+        errorMessage.classList.remove('hidden');
+        errorMessage.textContent = msg;
+    }
+
+    function clearError() {
+        errorMessage.classList.add('hidden');
+        errorMessage.textContent = '';
+    }
+
+    function buildComparisonTable(playersData) {
+        const fields = ['Player', 'Squad', 'Comp', 'Pos', 'Age', 'Gls', 'Ast', 'xG', 'xAG', 'Market_Value_Million_EUR', 'Predicted_Value', 'Undervaluation'];
+        const table = document.createElement('table');
+        table.className = 'similar-table'; // Use the new table style
+        const thead = document.createElement('thead');
+        const trHead = document.createElement('tr');
+        const thMetric = document.createElement('th'); thMetric.textContent = 'Metric'; trHead.appendChild(thMetric);
+        playersData.forEach(p => { const th = document.createElement('th'); th.textContent = p.Player || p.name; trHead.appendChild(th); });
+        thead.appendChild(trHead); table.appendChild(thead);
+        const tbody = document.createElement('tbody');
+        fields.forEach(f => {
+            const tr = document.createElement('tr');
+            const tdLabel = document.createElement('td'); tdLabel.textContent = f; tr.appendChild(tdLabel);
+            playersData.forEach(p => {
+                const td = document.createElement('td');
+                const v = p[f] !== undefined && p[f] !== null ? p[f] : '-';
+                td.textContent = v;
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        return table;
+    }
+
+    // Replaced form submit with button click
+    document.getElementById('compareBtn').addEventListener('click', async (e) => {
+        e.preventDefault();
+        clearError();
+        const names = [];
+        ['player1', 'player2', 'player3'].forEach(id => { const v = document.getElementById(id).value.trim(); if (v) names.push(v); });
+        if (names.length < 2) { showError('Please choose at least two players.'); return; }
+
+        resultsSection.classList.remove('hidden'); loadingMessage.classList.remove('hidden'); resultsContent.innerHTML = '';
+
+        try {
+            const resp = await fetch('/api/compare', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ players: names }) });
+            const j = await resp.json();
+            loadingMessage.classList.add('hidden');
+            if (!j.success) { showError(j.error || 'Comparison failed'); return; }
+            const data = j.data || [];
+            // build table
+            const table = buildComparisonTable(data);
+            resultsContent.innerHTML = ''; resultsContent.appendChild(table);
+        } catch (err) {
+            loadingMessage.classList.add('hidden'); showError('Failed to fetch comparison: ' + (err.message || ''));
+        }
+    });
+
+    loadPlayers();
 </script>
 {% endblock %}
