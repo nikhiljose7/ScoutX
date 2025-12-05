@@ -8,7 +8,7 @@ import unidecode
 import threading
 
 # Path to the user's CSV
-CSV_PATH = os.path.join('moneyball_report_outputs', 'players_data_cleaned_with_market_values_with_market_values1.csv')
+CSV_PATH = os.path.join('moneyball_report_outputs', 'data chatbot.csv')
 
 # Feature definitions (Reference Repo)
 ATTACKER_FEATURES = [
@@ -64,16 +64,16 @@ ALL_FEATURES_BY_POSITION = {
 
 # Mapping from Reference Column Names to User Column Names
 COLUMN_MAPPING = {
-    'Performance Gls': 'Gls',
-    'Performance Ast': 'Ast',
-    'Performance G+A': 'G+A',
+    'Performance Gls': 'Goals',
+    'Performance Gls': 'Assists',
+    'Performance G+A': 'Goals + Assists',
     'Standard Sh': 'Sh',
     'Standard SoT': 'SoT',
     'Standard SoT%': 'SoT%',
     'Standard Sh/90': 'Sh/90',
     'Standard Dist': 'Dist',
     'Expected xG': 'xG',
-    'Expected npxG': 'npxG',
+    'Expected npxG': 'Non-Penalty xG',
     'Expected xAG': 'xAG',
     'Expected xA': 'xA',
     'KP': 'KP',
@@ -111,17 +111,17 @@ COLUMN_MAPPING = {
     'Performance CS': 'CS',
     'Performance CS%': 'CS%',
     'Penalty Kicks PKsv': 'PKsv',
-    'Penalty Kicks PKatt': 'PKatt',
+    'Penalty Kicks PKatt': 'PKatt_stats_keeper',
     'GCA GCA': 'GCA',
-    'Playing Time MP': 'MP',
+    'Playing Time MP': 'Matches Played',
     'Born': 'Born',
-    'Pos': 'Pos',
-    'Squad': 'Squad',
-    'Comp': 'Comp',
+    'Pos': 'Position',
+    'Squad': 'Team',
+    'Comp': 'league',
     'Age': 'Age',
     'Nation': 'Nation',
     'Player': 'Player',
-    'Rk': 'Rk'
+    'Rk': 'Rk_stats_playing_time'
 }
 
 # Reverse mapping for display/logic if needed, or just use mapped columns
@@ -445,3 +445,4 @@ def get_similar_players(player_id: str, top_k: int = 10, filters: Dict[str, Any]
         })
 
     return clean(results)
+

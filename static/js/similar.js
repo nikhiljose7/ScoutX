@@ -598,13 +598,17 @@ compareSelectedBtn.addEventListener("click", async () => {
 });
 
 async function compareMultiple(ids) {
+    console.log('[DEBUG] Starting compareMultiple with IDs:', ids);
     try {
+        console.log('[DEBUG] Fetching /api/compare_players...');
         const r = await fetch("/api/compare_players", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ player_ids: ids }),
         });
         const j = await r.json();
+        console.log('[DEBUG] Received response:', j);
+        console.log('[DEBUG] AI Report length:', j.ai_report ? j.ai_report.length : 0);
         if (!j.ok) return showError("Compare failed.");
 
         lastCompareResponse = j;
@@ -618,9 +622,44 @@ async function compareMultiple(ids) {
             j.players[0].Player
         );
 
-        aiReportBox.innerHTML = marked.parse(j.ai_report);
-        aiReportBox.style.display = "block";
-        toggleAiReportBtn.innerText = "Hide AI Report";
+        // Render AI report with error handling
+        console.log('[DEBUG] AI Report text:', j.ai_report ? j.ai_report.substring(0, 100) : 'NULL');
+        console.log('[DEBUG] marked available?', typeof marked !== 'undefined');
+        
+        if (j.ai_report && j.ai_report.trim()) {
+            try {
+                // Always use simple rendering for reliability
+                let rendered = j.ai_report;
+                
+                // Try markdown parsing
+                if (typeof marked !== 'undefined' && marked.parse) {
+                    console.log('[DEBUG] Using marked.parse()');
+                    rendered = marked.parse(j.ai_report);
+                } else {
+                    console.log('[DEBUG] Using fallback rendering');
+                    // Convert markdown-like syntax to HTML manually
+                    rendered = rendered
+                        .replace(/\n/g, '<br>')
+                        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                        .replace(/\*(.+?)\*/g, '<em>$1</em>');
+                }
+                
+                aiReportBox.innerHTML = rendered;
+                aiReportBox.style.display = "block";
+                toggleAiReportBtn.innerText = "Hide AI Report";
+                console.log('[DEBUG] AI Report rendered successfully');
+            } catch (err) {
+                console.error('[DEBUG] Error rendering AI report:', err);
+                aiReportBox.innerHTML = '<div style="padding: 20px; background: #fff; color: #333;"><h3>AI Report (Raw)</h3><pre style="white-space: pre-wrap;">' + j.ai_report + '</pre></div>';
+                aiReportBox.style.display = "block";
+                toggleAiReportBtn.innerText = "Hide AI Report";
+            }
+        } else {
+            console.log('[DEBUG] No AI report in response');
+            aiReportBox.innerHTML = '<p style="padding: 20px; color: #ff6b6b;">No AI report was generated. Please try again.</p>';
+            aiReportBox.style.display = "block";
+            toggleAiReportBtn.innerText = "Hide AI Report";
+        }
     } catch (err) {
         showError(err.message || String(err));
     }

@@ -59,6 +59,13 @@
 
         <!-- Input Area -->
         <div class="chat-input-area">
+            <div class="input-options">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="generalKnowledgeMode">
+                    <span>🌐 General Football Knowledge Mode</span>
+                    <small>(Ask any football question without database search)</small>
+                </label>
+            </div>
             <div class="input-wrapper">
                 <input type="text" id="chatInput" placeholder="Ask about a player (e.g., 'Is Haaland undervalued?')..."
                     autocomplete="off">
@@ -153,12 +160,16 @@
         addMessage('', false, true);
 
         try {
+            const generalMode = document.getElementById('generalKnowledgeMode').checked;
             const response = await fetch('/api/chatbot', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ message: message })
+                body: JSON.stringify({ 
+                    message: message,
+                    general_mode: generalMode 
+                })
             });
 
             const result = await response.json();
@@ -198,10 +209,14 @@
         addMessage('', false, true); // loading
 
         try {
+            const generalMode = document.getElementById('generalKnowledgeMode').checked;
             const response = await fetch('/api/chatbot', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: messageText })
+                body: JSON.stringify({ 
+                    message: messageText,
+                    general_mode: generalMode 
+                })
             });
 
             const result = await response.json();
@@ -234,7 +249,7 @@
             const promptLines = [];
             promptLines.push(`Please provide a concise report on the following player and their recent performance/highlights.`);
             promptLines.push(`Player: ${playerName}`);
-            const keysToShow = ['Squad', 'Comp', 'Pos', 'Age', 'Market_Value_Million_EUR', 'Predicted_Value', 'Undervaluation'];
+            const keysToShow = ['Team', 'league', 'Position', 'Age', 'Market_Value_Million_EUR', 'Predicted_Value', 'Undervaluation'];
             keysToShow.forEach(k => {
                 if (playerData[k] !== undefined) {
                     promptLines.push(`${k}: ${playerData[k]}`);

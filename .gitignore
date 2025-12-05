@@ -1,16 +1,68 @@
-venv/
-.env
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
+.Python
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# Flask
+instance/
+.webassets-cache
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
 *.log
-*.pot
-*.mo
-*.spec
+rag_error.log
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Distribution / Packaging
 build/
 dist/
-*.manifest
-*.zip
-projectzip.zip
+*.egg-info/
+*.egg
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+*~
+
+# Documentation (if generated)
+docs/_build/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Cache
+.cache/

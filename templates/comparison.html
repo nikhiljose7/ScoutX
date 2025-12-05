@@ -72,7 +72,23 @@
     }
 
     function buildComparisonTable(playersData) {
-        const fields = ['Player', 'Squad', 'Comp', 'Pos', 'Age', 'Gls', 'Ast', 'xG', 'xAG', 'Market_Value_Million_EUR', 'Predicted_Value', 'Undervaluation'];
+        const fields = [
+            // Basic Info
+            'Player', 'Team', 'league', 'Position', 'Age', 'Nation',
+            // Playing Time
+            'Matches Played', 'Starts', 'Min', '90s',
+            // Attacking Stats (Forwards)
+            'Goals', 'Assists', 'Goals + Assists', 'xG', 'xAG',
+            'Sh', 'SoT', 'SoT%', 'G/Sh', 'G/SoT',
+            // Midfield Stats (Creativity & Passing)
+            'KP', 'PPA', 'Cmp', 'Att', 'Cmp%',
+            // Defensive Stats (Defenders)
+            'Tkl', 'Int', 'Clr', 'Tkl+Int',
+            // Aerial Ability
+            'Won', 'Won%',
+            // Market Value
+            'Market_Value_Million_EUR', 'Predicted_Value', 'Undervaluation'
+        ];
         const table = document.createElement('table');
         table.className = 'similar-table'; // Use the new table style
         const thead = document.createElement('thead');

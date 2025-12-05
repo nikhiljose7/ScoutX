@@ -1,5 +1,9 @@
 from flask import Blueprint, request, jsonify, session
+
 import google.generativeai as genai
+
+# Conversation history storage
+conversation_histories = {}
 import os
 import pandas as pd
 from typing import Optional, Dict, Any
@@ -10,18 +14,6 @@ chatbot_bp = Blueprint('chatbot_bp', __name__)
 
 import google.generativeai.types as types
 
-# Monkeypatch for GenerationConfig.MediaResolution error
-try:
-    if not hasattr(types.GenerationConfig, 'MediaResolution'):
-        class MediaResolution:
-            UNSPECIFIED = 0
-            LOW = 1
-            MEDIUM = 2
-            HIGH = 3
-        types.GenerationConfig.MediaResolution = MediaResolution
-except Exception:
-    pass
-
 # Configure the Gemini API (optional; if key not set, model calls will fail later)
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
@@ -29,8 +21,8 @@ genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 def _load_player_data() -> pd.DataFrame:
     """Load the preferred cleaned CSV if available, otherwise fallback to predictions CSV."""
     candidates = [
-        os.path.join('moneyball_report_outputs', 'players_data_cleaned_with_market_values_with_market_values1.csv'),
-        os.path.join('moneyball_report_outputs', 'all_predictions_with_undervaluation.csv')
+        os.path.join('moneyball_report_outputs', 'data chatbot.csv'),
+        os.path.join('moneyball_report_outputs', 'data chatbot.csv')
     ]
     for p in candidates:
         try:
@@ -98,93 +90,28 @@ def chatbot():
     try:
         # start chat with optional session history
         chat_history = session.get('chat_history', [])
-        chat = model.start_chat(history=chat_history)
-
-        # Detect player from explicit param or message text
-        player_row = None
-        if requested_player:
-            player_row = _find_player_by_name(requested_player, data)
-        if player_row is None and not data.empty:
-            low = message.lower()
-            for candidate in data['Player'].astype(str).unique():
-                if candidate and candidate.lower() in low:
-                    player_row = _find_player_by_name(candidate, data)
-                    if player_row:
-                        break
-
-        # Use RAG service for better answers using the vector database
+        
+        # Try to use Simple Direct Search RAG (No APIs, No PyTorch!)
         try:
-            from rag_service import rag_service
-        except ImportError:
-            # Fallback if rag_service fails to import
-            rag_service = None
-        
-        # Combine user message with any context we found (like live data)
-        # Add live facts if available
-        live_info = None
-        recent_matches = None
-        
-        if use_live:
-            try:
-                # 1. Player search
-                pname = requested_player or (player_row.get('Player') if player_row else None)
-                if pname:
-                    live_info = live_api.get_player_live_summary(pname)
-                
-                # 2. Team/Match search
-                low_msg = message.lower()
-                if any(k in low_msg for k in ['match', 'game', 'score', 'result', 'play']):
-                    import re
-                    potential_teams = re.findall(r'\b[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\b', message)
-                    
-                    ignore = {'How', 'What', 'When', 'Where', 'Who', 'Why', 'The', 'A', 'An', 'Is', 'Are', 'Was', 'Were', 'Did', 'Does', 'Do', 'Can', 'Could', 'Will', 'Would', 'Should', 'May', 'Might', 'Must', 'Have', 'Has', 'Had', 'Tell', 'Me', 'About', 'Show', 'Give', 'List', 'Find', 'Get', 'Recent', 'Last', 'Next', 'Live', 'Match', 'Game', 'Score', 'Result', 'Played', 'Playing', 'Vs', 'Versus', 'Against'}
-                    candidates = [t for t in potential_teams if t not in ignore and len(t) > 3]
-                    
-                    if candidates:
-                        team_name = candidates[0]
-                        recent_matches = live_api.get_team_recent_matches(team_name)
-                    
-                    if 'live' in low_msg:
-                        live_summary = live_api.get_live_matches_summary()
-                        if live_summary:
-                            if recent_matches:
-                                recent_matches += "\n\n" + live_summary
-                            else:
-                                recent_matches = live_summary
-
-            except Exception as e:
-                print(f"Live API error: {e}")
-                live_info = None
-
-        # Use RAG service for better answers using the vector database
-        # from rag_service import rag_service (already imported above)
-        
-        # Combine user message with any context we found (like live data)
-        rag_query = message
-        if live_info:
-            rag_query += f"\n\nLive Info Context: {live_info}"
-        if recent_matches:
-            rag_query += f"\n\nRecent Matches Context: {recent_matches}"
-        if player_row:
-             rag_query += f"\n\nPlayer Data Context: {player_row}"
-
-        if rag_service:
-            reply = rag_service.get_answer(rag_query)
-        else:
-            reply = "RAG service is unavailable."
-        
-        # Update chat history manually since we are not using chat.send_message directly anymore
-        # or we can just append to session if we want to maintain history for RAG too, 
-        # but RAG usually handles single turn or we need to pass history to RAG.
-        # For now, let's just return the reply.
-        
-        # If we want to keep using the chat session for history, we can feed the RAG answer back to it,
-        # but RAG is a replacement for the generation part.
-        
-        # Let's just return the RAG reply.
-        return jsonify({'reply': reply})
+            from rag_service_simple import get_rag_response
+            rag_response = get_rag_response(message)
+            
+            # Update history (simple append for now)
+            chat_history.append({"role": "user", "parts": [message]})
+            chat_history.append({"role": "model", "parts": [rag_response]})
+            session['chat_history'] = chat_history
+            
+            return jsonify({'reply': rag_response})
+        except Exception as e:
+            import traceback
+            with open('rag_error.log', 'w') as f:
+                f.write(f"Error: {str(e)}\n")
+                f.write(traceback.format_exc())
+            print(f"RAG Error: {e}")
+            return jsonify({'reply': "I'm sorry, I couldn't retrieve the information from my database at this time."})
     except Exception as e:
         return jsonify({'reply': f'An error occurred: {e}'})
+
 
 
 @chatbot_bp.route('/api/chatbot/reset', methods=['POST'])
@@ -216,3 +143,4 @@ def sofascore_tv_countries():
         return jsonify({'success': True, 'data': j})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+

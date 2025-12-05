@@ -1,4 +1,5 @@
 import os
+
 import google.generativeai as genai
 from typing import Dict, Any
 
@@ -29,9 +30,14 @@ def generate_comparison_report(payload: Dict[str, Any]) -> str:
         
         lines = [AI_PROMPT_TEMPLATE.strip(), "\nPLAYER DATA:\n"]
         brief_keys = [
-            "Performance Gls", "Performance Ast", "KP",
-            "Expected xG", "Expected xA",
-            "Int", "Tackles Tkl", "Aerial Duels Won"
+            "Goals", "Gls", "Performance Gls",
+            "Assists", "Ast", "Performance Ast",
+            "KP", "Key Passes",
+            "xG", "Expected xG",
+            "xAG", "Expected xA",
+            "Int", "Interceptions",
+            "Tkl", "Tackles Tkl",
+            "Won", "Aerial Duels Won"
         ]
         
         # Mapping for brief keys if they differ in payload
@@ -40,8 +46,8 @@ def generate_comparison_report(payload: Dict[str, Any]) -> str:
         
         for p in players:
             name = p.get("Player", "Unknown")
-            pos  = p.get("Pos", "")
-            club = p.get("Squad", "")
+            pos  = p.get("Position", p.get("Pos", ""))  # Try Position first, fallback to Pos
+            club = p.get("Team", p.get("Squad", ""))  # Try Team first, fallback to Squad
             snippet = []
             
             # Helper to find value even if key is slightly different

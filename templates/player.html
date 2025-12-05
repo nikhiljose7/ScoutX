@@ -4,17 +4,72 @@
 
 {% block extra_css %}
 <style>
-  .player-card { max-width: 900px; margin: 1rem auto; }
-  .player-table { width: 100%; border-collapse: collapse; }
-  .player-table td { padding: 0.5rem; border-bottom: 1px solid #eee; }
-  .loading { text-align: center; padding: 1.5rem; }
-  .lead-field { font-weight: 600; width: 220px; }
+  .hidden {
+    display: none !important;
+  }
+
+  .player-card {
+    max-width: 900px;
+    margin: 1rem auto;
+  }
+
+  .player-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .player-table td {
+    padding: 0.5rem;
+    border-bottom: 1px solid #eee;
+  }
+
+  .loading {
+    text-align: center;
+    padding: 1.5rem;
+  }
+
+  .lead-field {
+    font-weight: 600;
+    width: 220px;
+  }
+
   /* dropdown-checkbox styles */
-  .dropdown-checkbox { position: relative; display: inline-block; }
-  .dropdown-panel { position: absolute; top: 110%; left: 0; background: #fff; border: 1px solid #ddd; box-shadow: 0 4px 10px rgba(0,0,0,0.06); padding: 8px; z-index: 1200; max-height: 260px; overflow: auto; width: 360px; }
-  .dropdown-panel label { display: flex; align-items: center; gap: 8px; padding: 4px 6px; }
-  .dropdown-panel label:hover { background: #fafafa; }
-  .dropdown-panel .mandatory { font-weight: 600; }
+  .dropdown-checkbox {
+    position: relative;
+    display: inline-block;
+  }
+
+  .dropdown-panel {
+    position: absolute;
+    top: 110%;
+    left: 0;
+    background: #fff;
+    border: 1px solid #ddd;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    padding: 8px;
+    z-index: 1200;
+    max-height: 260px;
+    overflow: auto;
+    width: 360px;
+    color: #333;
+  }
+
+  .dropdown-panel label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px;
+    color: #333;
+    cursor: pointer;
+  }
+
+  .dropdown-panel label:hover {
+    background: #fafafa;
+  }
+
+  .dropdown-panel .mandatory {
+    font-weight: 600;
+  }
 </style>
 {% endblock %}
 
@@ -31,24 +86,24 @@
 
   <div id="playerContainer" class="p-3 hidden">
     <div class="mb-3">
-        <!-- Controls: checkbox-dropdown for additional stats -->
-        <label for="extraFields" style="margin-right:12px;">Select visible stats:</label>
-        <div class="dropdown-checkbox" id="fieldsDropdown" style="margin-left:8px;">
-          <button id="dropdownBtn" class="btn btn-sm btn-outline-secondary">Fields ▾</button>
-          <div id="dropdownPanel" class="dropdown-panel hidden" aria-hidden="true">
-            <!-- checkboxes populated by JS -->
-          </div>
+      <!-- Controls: checkbox-dropdown for additional stats -->
+      <label for="extraFields" style="margin-right:12px;">Select visible stats:</label>
+      <div class="dropdown-checkbox" id="fieldsDropdown" style="margin-left:8px;">
+        <button id="dropdownBtn" class="btn btn-sm btn-outline-secondary">Fields ▾</button>
+        <div id="dropdownPanel" class="dropdown-panel hidden" aria-hidden="true">
+          <!-- checkboxes populated by JS -->
         </div>
-        <small style="margin-left:8px; color:#666;">(Checked = visible. Uncheck to hide.)</small>
+      </div>
+      <small style="margin-left:8px; color:#666;">(Checked = visible. Uncheck to hide.)</small>
     </div>
     <table class="player-table" id="playerTable">
       <tbody>
         <!-- populated by JS -->
       </tbody>
     </table>
-      <div class="mt-3 text-right">
-        <button id="openChatBtnBottom" class="btn btn-sm btn-primary">Get Report</button>
-      </div>
+    <div class="mt-3 text-right">
+      <button id="openChatBtnBottom" class="btn btn-sm btn-primary">Get Report</button>
+    </div>
   </div>
 </div>
 
@@ -56,186 +111,212 @@
 
 {% block extra_js %}
 <script>
-async function fetchPlayer(playerName) {
-  try {
-    const resp = await fetch(`/api/player/${encodeURIComponent(playerName)}`);
-    return await resp.json();
-  } catch (err) {
-    return { success: false, error: err.message };
-  }
-}
-
-function formatNumber(val) {
-  if (val === null || val === undefined) return '';
-  if (typeof val === 'number') return val.toFixed ? val.toFixed(2) : val;
-  return val;
-}
-
-window.addEventListener('DOMContentLoaded', async () => {
-  const params = new URLSearchParams(window.location.search);
-  // Prefer the client query param, but fall back to a server-provided value
-  // (rendered by Flask) if present. This helps when the template is
-  // rendered with a `player` query param on the initial request.
-  let playerName = params.get('player');
-  if (!playerName) {
-    // `player_name` is provided by the server via render_template; it will
-    // be an empty string when not present. Use it only when non-empty.
-    const serverProvided = "{{ player_name | e }}";
-    if (serverProvided && serverProvided.trim() !== '') {
-      playerName = serverProvided;
+  async function fetchPlayer(playerName) {
+    try {
+      const resp = await fetch(`/api/player/${encodeURIComponent(playerName)}`);
+      return await resp.json();
+    } catch (err) {
+      return { success: false, error: err.message };
     }
   }
-  const loading = document.getElementById('loading');
-  const error = document.getElementById('error');
-  const container = document.getElementById('playerContainer');
-  const tableBody = document.getElementById('playerTable').querySelector('tbody');
-  const openChatBtn = document.getElementById('openChatBtn');
 
-  if (!playerName) {
-    loading.classList.add('hidden');
-    error.textContent = 'No player selected.';
-    error.classList.remove('hidden');
-    return;
+  function formatNumber(val) {
+    if (val === null || val === undefined) return '';
+    if (typeof val === 'number') return val.toFixed ? val.toFixed(2) : val;
+    return val;
   }
 
-  loading.classList.remove('hidden');
-  error.classList.add('hidden');
-  container.classList.add('hidden');
-  tableBody.innerHTML = '';
+  window.addEventListener('DOMContentLoaded', async () => {
+    const params = new URLSearchParams(window.location.search);
+    // Prefer the client query param, but fall back to a server-provided value
+    // (rendered by Flask) if present. This helps when the template is
+    // rendered with a `player` query param on the initial request.
+    let playerName = params.get('player');
+    if (!playerName) {
+      // `player_name` is provided by the server via render_template; it will
+      // be an empty string when not present. Use it only when non-empty.
+      const serverProvided = "{{ player_name | e }}";
+      if (serverProvided && serverProvided.trim() !== '') {
+        playerName = serverProvided;
+      }
+    }
+    const loading = document.getElementById('loading');
+    const error = document.getElementById('error');
+    const container = document.getElementById('playerContainer');
+    const tableBody = document.getElementById('playerTable').querySelector('tbody');
+    const openChatBtn = document.getElementById('openChatBtn');
 
-  const payload = await fetchPlayer(playerName);
-  loading.classList.add('hidden');
-
-  if (!payload.success) {
-    error.textContent = payload.error || 'Player not found';
-    error.classList.remove('hidden');
-    return;
-  }
-
-  const data = payload.data;
-
-  // Build table rows - show a curated default set of relevant stats (based on common football metrics)
-  const defaultRelevant = ['Player','Squad','Comp','Pos','Age','MP','Starts','Min','90s','Gls','Ast','G+A','xG','xAG','Sh','SoT','SoT%','G/Sh','G/SoT','Market_Value_Million_EUR','Predicted_Value','Undervaluation'];
-
-  // Prefer these defaults (ensure name, age, country, goals, assists, position, club are shown)
-  const defaultRelevantPreferred = ['Player','Age','Nation','Gls','Ast','Pos','Squad'];
-
-  // Helper to create a row (no per-row remove button; visibility controlled by checkboxes)
-  function addRow(key, val) {
-    // If already present, update the value
-    const existing = tableBody.querySelector(`tr[data-key="${CSS.escape(key)}"]`);
-    if (existing) {
-      existing.querySelector('td.value-cell').innerHTML = (val === null || val === undefined) ? '' : String(val);
+    if (!playerName) {
+      loading.classList.add('hidden');
+      error.textContent = 'No player selected.';
+      error.classList.remove('hidden');
       return;
     }
 
-    const tr = document.createElement('tr');
-    tr.dataset.key = key;
-    const tdKey = document.createElement('td');
-    tdKey.className = 'lead-field';
-    tdKey.textContent = key;
+    loading.classList.remove('hidden');
+    error.classList.add('hidden');
+    container.classList.add('hidden');
+    tableBody.innerHTML = '';
 
-    const tdVal = document.createElement('td');
-    tdVal.className = 'value-cell';
-    tdVal.innerHTML = (val === null || val === undefined) ? '' : String(val);
+    const payload = await fetchPlayer(playerName);
+    loading.classList.add('hidden');
 
-    tr.appendChild(tdKey);
-    tr.appendChild(tdVal);
-    tableBody.appendChild(tr);
-  }
-
-  // Fill defaults first (only if the key exists in returned data)
-  const availableKeys = Object.keys(data || {});
-  const shown = new Set();
-  defaultRelevant.forEach(k => {
-    // try to match ignoring case: prefer exact match, else find case-insensitive key
-    const foundKey = availableKeys.find(ak => ak.toLowerCase() === k.toLowerCase());
-    if (foundKey) {
-      addRow(foundKey, typeof data[foundKey] === 'number' ? formatNumber(data[foundKey]) : data[foundKey]);
-      shown.add(foundKey);
-    }
-  });
-
-  // Prepare checkbox-dropdown in dropdownPanel. Selection state represents which rows are visible.
-  const dropdownPanel = document.getElementById('dropdownPanel');
-  dropdownPanel.innerHTML = '';
-
-  // Fields that must always be visible and cannot be unselected
-  const mandatory = new Set(['Player', 'Age', 'Squad']);
-
-  // Ensure preferred defaults are shown first
-  defaultRelevantPreferred.forEach(k => {
-    const foundKey = availableKeys.find(ak => ak.toLowerCase() === k.toLowerCase());
-    if (foundKey && !shown.has(foundKey)) {
-      addRow(foundKey, typeof data[foundKey] === 'number' ? formatNumber(data[foundKey]) : data[foundKey]);
-      shown.add(foundKey);
-    }
-  });
-
-  // Build checkbox list for all availableKeys
-  availableKeys.forEach(k => {
-    const id = `cb_${Math.random().toString(36).slice(2,9)}`;
-    const label = document.createElement('label');
-    const chk = document.createElement('input');
-    chk.type = 'checkbox';
-    chk.value = k;
-    chk.id = id;
-
-    // Checkbox initial checked state: shown or mandatory
-    if (shown.has(k) || mandatory.has(k)) chk.checked = true;
-
-    // Disable mandatory checkboxes
-    if (mandatory.has(k)) {
-      chk.disabled = true;
-      label.classList.add('mandatory');
+    if (!payload.success) {
+      error.textContent = payload.error || 'Player not found';
+      error.classList.remove('hidden');
+      return;
     }
 
-    const span = document.createElement('span');
-    span.textContent = k;
-    label.appendChild(chk);
-    label.appendChild(span);
-    dropdownPanel.appendChild(label);
+    const data = payload.data;
 
-    // Wire change handler
-    chk.addEventListener('change', (ev) => {
-      const key = ev.target.value;
-      if (ev.target.checked) {
-        if (!shown.has(key)) {
-          addRow(key, typeof data[key] === 'number' ? formatNumber(data[key]) : data[key]);
-          shown.add(key);
-        }
-      } else {
-        if (mandatory.has(key)) return; // shouldn't happen because disabled
-        const tr = tableBody.querySelector(`tr[data-key="${CSS.escape(key)}"]`);
-        if (tr) tr.remove();
-        shown.delete(key);
+    // Build table rows - show a curated default set of relevant stats (based on common football metrics)
+    const defaultRelevant = [
+      // Basic Info
+      'Player', 'Team', 'league', 'Position', 'Age', 'Nation',
+      // Playing Time
+      'Matches Played', 'Starts', 'Min', '90s',
+      // Attacking Stats (Forwards)
+      'Goals', 'Assists', 'Goals + Assists', 'xG', 'xAG', 
+      'Sh', 'SoT', 'SoT%', 'G/Sh', 'G/SoT',
+      // Midfield Stats (Creativity & Passing)
+      'KP', 'PPA', 'Cmp', 'Att', 'Cmp%',
+      // Defensive Stats (Defenders)
+      'Tkl', 'Int', 'Clr', 'Tkl+Int',
+      // Aerial Ability
+      'Won', 'Won%',
+      // Market Value
+      'Market_Value_Million_EUR', 'Predicted_Value', 'Undervaluation'
+    ];
+
+    // Prefer these defaults (ensure name, age, country, goals, assists, position, club are shown)
+    const defaultRelevantPreferred = [
+      'Player', 'Age', 'Nation', 'Position', 'Team', 'league',
+      'Goals', 'Assists', 'Matches Played', 'Min'
+    ];
+
+    // Helper to create a row (no per-row remove button; visibility controlled by checkboxes)
+    function addRow(key, val) {
+      // If already present, update the value
+      const existing = tableBody.querySelector(`tr[data-key="${CSS.escape(key)}"]`);
+      if (existing) {
+        existing.querySelector('td.value-cell').innerHTML = (val === null || val === undefined) ? '' : String(val);
+        return;
+      }
+
+      const tr = document.createElement('tr');
+      tr.dataset.key = key;
+      const tdKey = document.createElement('td');
+      tdKey.className = 'lead-field';
+      tdKey.textContent = key;
+
+      const tdVal = document.createElement('td');
+      tdVal.className = 'value-cell';
+      tdVal.innerHTML = (val === null || val === undefined) ? '' : String(val);
+
+      tr.appendChild(tdKey);
+      tr.appendChild(tdVal);
+      tableBody.appendChild(tr);
+    }
+
+    // Fill defaults first (only if the key exists in returned data)
+    const availableKeys = Object.keys(data || {});
+    const shown = new Set();
+    defaultRelevant.forEach(k => {
+      // try to match ignoring case: prefer exact match, else find case-insensitive key
+      const foundKey = availableKeys.find(ak => ak.toLowerCase() === k.toLowerCase());
+      if (foundKey) {
+        addRow(foundKey, typeof data[foundKey] === 'number' ? formatNumber(data[foundKey]) : data[foundKey]);
+        shown.add(foundKey);
       }
     });
-  });
 
-  // Dropdown open/close
-  const dropdownBtn = document.getElementById('dropdownBtn');
-  const dropdownWrapper = document.getElementById('fieldsDropdown');
-  dropdownBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    dropdownPanel.classList.toggle('hidden');
-    dropdownPanel.setAttribute('aria-hidden', dropdownPanel.classList.contains('hidden'));
-  });
-  // Close when clicking outside
-  document.addEventListener('click', (e) => {
-    if (!dropdownWrapper.contains(e.target)) {
-      dropdownPanel.classList.add('hidden');
-      dropdownPanel.setAttribute('aria-hidden', 'true');
-    }
-  });
+    // Prepare checkbox-dropdown in dropdownPanel. Selection state represents which rows are visible.
+    const dropdownPanel = document.getElementById('dropdownPanel');
+    dropdownPanel.innerHTML = '';
 
-  // Setup Get Report (open chatbot) button at bottom
-  const openChatBtnBottom = document.getElementById('openChatBtnBottom');
-  openChatBtnBottom.addEventListener('click', (ev) => {
-    ev.preventDefault();
-    window.location.href = `/chatbot?player=${encodeURIComponent(playerName)}`;
+    // Fields that must always be visible and cannot be unselected
+    const mandatory = new Set(['Player', 'Age', 'Team']);
+
+    // Ensure preferred defaults are shown first
+    defaultRelevantPreferred.forEach(k => {
+      const foundKey = availableKeys.find(ak => ak.toLowerCase() === k.toLowerCase());
+      if (foundKey && !shown.has(foundKey)) {
+        addRow(foundKey, typeof data[foundKey] === 'number' ? formatNumber(data[foundKey]) : data[foundKey]);
+        shown.add(foundKey);
+      }
+    });
+
+    // Build checkbox list for all availableKeys
+    availableKeys.forEach(k => {
+      const id = `cb_${Math.random().toString(36).slice(2, 9)}`;
+      const label = document.createElement('label');
+      const chk = document.createElement('input');
+      chk.type = 'checkbox';
+      chk.value = k;
+      chk.id = id;
+
+      // Checkbox initial checked state: shown or mandatory
+      if (shown.has(k) || mandatory.has(k)) chk.checked = true;
+
+      // Disable mandatory checkboxes
+      if (mandatory.has(k)) {
+        chk.disabled = true;
+        label.classList.add('mandatory');
+      }
+
+      const span = document.createElement('span');
+      span.textContent = k;
+      label.appendChild(chk);
+      label.appendChild(span);
+      dropdownPanel.appendChild(label);
+
+      // Wire change handler
+      chk.addEventListener('change', (ev) => {
+        const key = ev.target.value;
+        if (ev.target.checked) {
+          if (!shown.has(key)) {
+            addRow(key, typeof data[key] === 'number' ? formatNumber(data[key]) : data[key]);
+            shown.add(key);
+          }
+        } else {
+          if (mandatory.has(key)) return; // shouldn't happen because disabled
+          const tr = tableBody.querySelector(`tr[data-key="${CSS.escape(key)}"]`);
+          if (tr) tr.remove();
+          shown.delete(key);
+        }
+      });
+    });
+
+    // Dropdown open/close
+    const dropdownBtn = document.getElementById('dropdownBtn');
+    const dropdownWrapper = document.getElementById('fieldsDropdown');
+    dropdownBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const isHidden = dropdownPanel.classList.contains('hidden');
+      dropdownPanel.classList.toggle('hidden');
+      dropdownPanel.setAttribute('aria-hidden', !isHidden);
+    });
+    // Close when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!dropdownWrapper.contains(e.target)) {
+        dropdownPanel.classList.add('hidden');
+        dropdownPanel.setAttribute('aria-hidden', 'true');
+      }
+    });
+    
+    // Prevent dropdown from closing when clicking inside it
+    dropdownPanel.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+
+    // Setup Get Report (open chatbot) button at bottom
+    const openChatBtnBottom = document.getElementById('openChatBtnBottom');
+    openChatBtnBottom.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      window.location.href = `/chatbot?player=${encodeURIComponent(playerName)}`;
+    });
+    container.classList.remove('hidden');
   });
-  container.classList.remove('hidden');
-});
 </script>
 {% endblock %}

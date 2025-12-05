@@ -1,3 +1,7 @@
+# Fix for Windows PyTorch DLL issues - MUST be set FIRST
+import os
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
+
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -47,8 +51,8 @@ def load_data():
     # Prefer the cleaned players dataset (with market values) when available
     candidates = [
         'players_data_with_weights.csv',
-        os.path.join('moneyball_report_outputs', 'players_data_cleaned_with_market_values_with_market_values1.csv'),
-        os.path.join('moneyball_report_outputs', 'all_predictions_with_undervaluation.csv')
+        os.path.join('moneyball_report_outputs', 'data chatbot.csv'),
+        os.path.join('moneyball_report_outputs', 'data chatbot.csv')
     ]
 
     for path in candidates:
@@ -105,7 +109,9 @@ def get_filter_options():
     """Get available filter options for the undervalued players page"""
     try:
         # Load results from the analysis
-        results_df = pd.read_csv('moneyball_report_outputs/all_predictions_with_undervaluation.csv')
+        results_df = pd.read_csv('moneyball_report_outputs/all_predictions_with_undervaluation (19).csv')
+        
+        # Apply filters (using original column names)
         
         return jsonify({
             'success': True,
@@ -137,9 +143,11 @@ def get_undervalued():
         min_undervaluation = request.json.get('min_undervaluation')
         
         # Load results from the analysis
-        results_df = pd.read_csv('moneyball_report_outputs/all_predictions_with_undervaluation.csv')
+        results_df = pd.read_csv('moneyball_report_outputs/all_predictions_with_undervaluation (19).csv')
         
-        # Apply filters
+        # Apply filters (using original column names)
+        
+        
         if position != 'ALL':
             results_df = results_df[results_df['Model_Pos'] == position]
             
@@ -172,7 +180,7 @@ def get_undervalued():
             'rank': 'Undervaluation',  # Default to undervaluation for rank
             'player': 'Player',
             'position': 'Main_Pos',
-            'squad': 'Squad',
+            'team': 'Squad',
             'league': 'Comp',
             'age': 'Age',
             'market_value': 'Market_Value_Million_EUR',
@@ -220,7 +228,7 @@ def get_players():
         if data is None:
             load_data()
         
-        players = data[['Player', 'Squad', 'Comp', 'Pos']].to_dict('records')
+        players = data[['Player', 'Team', 'league', 'Position']].to_dict('records')
         return jsonify({
             'success': True,
             'data': players
@@ -367,10 +375,10 @@ def api_meta():
     try:
         similarity_service._ensure_loaded()
         df = similarity_service._df_players
-        leagues = sorted(df["Comp"].dropna().astype(str).unique().tolist()) if "Comp" in df else []
+        leagues = sorted(df["league"].dropna().astype(str).unique().tolist()) if "league" in df else []
         pos_set = set()
-        if "Pos" in df.columns:
-            for raw in df["Pos"].dropna().astype(str).unique():
+        if "Position" in df.columns:
+            for raw in df["Position"].dropna().astype(str).unique():
                 parts = [p.strip() for p in raw.split(',')]
                 for p in parts:
                     pos_set.add(p)
@@ -448,7 +456,7 @@ def api_compare_players_new():
             players.append(similarity_service.clean(p))
             
         radars = [similarity_service.get_player_stats_for_radar(p.get("Rk") or p.get("Player")) for p in players]
-        keys = ["Player", "Pos", "Squad", "Age"] + radars[0]["labels"]
+        keys = ["Player", "Position", "Team", "Age"] + radars[0]["labels"]
         rows = []
         for p in players:
             row = {k: p.get(k, "") for k in keys}
@@ -471,3 +479,4 @@ def api_compare_players_new():
 if __name__ == '__main__':
     load_data()
     app.run(debug=True)
+
